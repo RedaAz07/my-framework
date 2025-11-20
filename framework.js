@@ -36,13 +36,59 @@ const framework = (function name() {
     effectsIndex++
   }
 
-  function jsx(params) {
+  function jsx(tags, props, ...child) {
+    if (typeof tags == "function") {
+      return { ...props, child }
+    }
+
+    return { tags, props: props || {}, ...child }
 
   }
-  function createElement(params) {
+  function createElement(node) {
+    if (typeof node == "string" || typeof node == "number") {
+      document.createTextNode(String(node))
+    }
+    const el = document.createElement(node.tags)
 
+
+    for ([type, value] of Object.entries(node.props)) {
+      if (type.startsWith("on") && typeof value === "function") {
+        el.addEventListener(type.slice(2).toLowerCase, value)
+
+      } else if (type === "className") {
+        el.clasName = value
+      } else if (type === "id") {
+        el.id = value
+      } else {
+        el.setAttribute(type, value)
+      }
+    }
+
+
+
+    for (let child of node.child.flat()) {
+      if (typeof child == "string" || typeof child == "number") {
+        el.appendChild(document.createTextNode(String(child)))
+      }
+      el.appendChild(document.createElement(child))
+
+    }
+    return el
   }
-  function rander(params) {
+
+
+
+  function rander() {
+    pendingEffects.forEach((v) => v)
+    effectsIndex = 0
+    callIndex = -1
+
+    const root = document.getElementById("root")
+    root.innerHTML = ""
+    const app = App()
+
+    root.appendChild(createElement(app))
+
 
   }
 
