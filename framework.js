@@ -1,97 +1,94 @@
-const framework = (function name() {
+const framework = (function () {
 
-  let callIndex = -1
-  const stateValues = []
+  let callIndex = 0;
+  const stateValues = [];
+
   function useState(initialValue) {
-    callIndex++
-    const currentIndex = Number(callIndex)
+    callIndex++;
+    const currentIndex = callIndex;
 
     if (stateValues[currentIndex] === undefined) {
-      stateValues[currentIndex] = initialValue
+      stateValues[currentIndex] = initialValue;
+    }
 
-    }
     function setValue(newValue) {
-      stateValues[currentIndex] = newValue
-      rander()
+      stateValues[currentIndex] = newValue;
+      render();
     }
-    return [stateValues[currentIndex], setValue]
+
+    return [stateValues[currentIndex], setValue];
   }
-  let effects = []
-  let effectsIndex = 0
-  let pendingEffects = []
+
+  let effects = [];
+  let effectsIndex = 0;
+  let pendingEffects = [];
 
   function useEffect(callback, deps) {
-    const oldDeps = effects[effectsIndex]
-    let hasChanged = true
+    const oldDeps = effects[effectsIndex];
+    let hasChanged = true;
 
     if (oldDeps) {
-      hasChanged = deps.some((dep, i) => !Object.is(dep, oldDeps[i]))
+      hasChanged = deps.some((dep, i) => !Object.is(dep, oldDeps[i]));
     }
 
     if (hasChanged) {
-      pendingEffects.push(callback)
+      pendingEffects.push(callback);
     }
 
-    effects[effectsIndex] = deps
-    effectsIndex++
+    effects[effectsIndex] = deps;
+    effectsIndex++;
   }
 
-  function jsx(tags, props, ...child) {
-    if (typeof tags == "function") {
-      return { ...props, child }
-    }
-
-    return { tags, props: props || {}, ...child }
-
+  function jsx(type, props, ...children) {
+    return { type, props: props || {}, children };
   }
+
   function createElement(node) {
-    if (typeof node == "string" || typeof node == "number") {
-      document.createTextNode(String(node))
+    if (typeof node === "string" || typeof node === "number") {
+      return document.createTextNode(String(node));
     }
-    const el = document.createElement(node.tags)
 
+    if (typeof node.type === "function") {
+      return createElement(node.type({ ...node.props, children: node.children }));
+    }
 
-    for ([type, value] of Object.entries(node.props)) {
-      if (type.startsWith("on") && typeof value === "function") {
-        el.addEventListener(type.slice(2).toLowerCase, value)
+    const el = document.createElement(node.type);
 
-      } else if (type === "className") {
-        el.clasName = value
-      } else if (type === "id") {
-        el.id = value
+    for (const [key, value] of Object.entries(node.props)) {
+      if (key.startsWith("on") && typeof value === "function") {
+        el.addEventListener(key.slice(2).toLowerCase(), value);
+      } else if (key === "className") {
+        el.className = value;
+      } else if (key === "id") {
+        el.id = value;
       } else {
-        el.setAttribute(type, value)
+        el.setAttribute(key, value);
       }
     }
 
+    node.children.flat().forEach(child => {
+      el.appendChild(createElement(child));
+    });
 
-
-    for (let child of node.child.flat()) {
-      if (typeof child == "string" || typeof child == "number") {
-        el.appendChild(document.createTextNode(String(child)))
-      }
-      el.appendChild(document.createElement(child))
-
-    }
-    return el
+    return el;
   }
 
+  function render() {
+    const root = document.getElementById("root");
 
+    pendingEffects.forEach(fn => fn());
+    pendingEffects = [];
 
-  function rander() {
-    pendingEffects.forEach((v) => v)
-    effectsIndex = 0
-    callIndex = -1
+    effectsIndex = 0;
+    callIndex = 0;
 
-    const root = document.getElementById("root")
-    root.innerHTML = ""
-    const app = App()
-
-    root.appendChild(createElement(app))
-
-
+    root.innerHTML = "";
+    const app = App();
+    root.appendChild(createElement(app));
   }
 
+  return { useState, useEffect, jsx, createElement, render };
 
-})()
+})();
 
+const { useState, useEffect, jsx, createElement, render } = framework;
